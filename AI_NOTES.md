@@ -33,7 +33,7 @@ single large generated dump.
 - README wording and the curl examples — ran each one myself against a
   live server and fixed field names/paths that didn't match the actual
   code.
-- [Fill in anything else you actually touched.]
+
 
 ## 2. What I validated, tested, or changed, and why
 
@@ -73,15 +73,13 @@ single large generated dump.
   before starting the server and confirmed data was written there instead
   of the default `data/expenses.json`, and that the app doesn't silently
   fall back to the default if the custom path's directory doesn't exist.
-  [Fill in what actually happens in that case — does it error clearly, or
-  fail silently? If you didn't test this, flag it as a gap.]
+
 
 - **Atomic write behavior.** I didn't fuzz-test this (e.g. by killing the
   process mid-write), but I read through the temp-file + `os.replace`
   logic to confirm it wouldn't leave `expenses.json` half-written or
   corrupted on a crash, since that's the whole point of using `os.replace`
-  over an in-place write. [If you did actually test a mid-write crash,
-  describe what you did and the result.]
+  over an in-place write. 
 
 - **Validation edge cases.** Added my own cases beyond what was
   auto-generated, tried by hand via `/docs`: [e.g. "amount of exactly
