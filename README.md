@@ -80,3 +80,6 @@ requests are serialized through a lock. To point at a different file, set the
 
 This is intentionally simple — it is not a database, and the full-file rewrite
 is O(n) per write, which is fine at this scale.
+
+
+<img width="1470" height="879" alt="image" src="https://github.com/user-attachments/assets/93af3285-6741-470b-b84d-7a11126975e0" />
