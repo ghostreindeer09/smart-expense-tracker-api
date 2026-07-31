@@ -70,7 +70,7 @@ async def validation_exception_handler(
         if isinstance(value, float) and not math.isfinite(value):
             error["input"] = repr(value)
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={"detail": jsonable_encoder(errors)},
     )
 
