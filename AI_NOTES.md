@@ -15,21 +15,7 @@ single large generated dump.
 - `src/main.py` — FastAPI routes and the 422 handling for validation errors.
 - `tests/test_expenses.py` — the pytest suite structure and most test cases.
 
-**Written or substantially changed by me:**
-- [Fill in: e.g. "The rounding behavior — I asked for amounts to be
-  rounded to 2 decimal places, and had to correct the first version, which
-  only rounded on output/display but stored the raw float. I moved the
-  rounding into the Pydantic validator so it's rounded once, at write
-  time, so totals sum the already-rounded values instead of re-rounding a
-  sum of unrounded floats."]
-- [Fill in: e.g. "The `EXPENSE_DATA_FILE` environment variable support —
-  the generated code hardcoded the path `data/expenses.json`. I asked for
-  it to be overridable and reviewed how it falls back to the default when
-  unset."]
-- [Fill in: e.g. "Tightened the lock scope in storage.py — the first pass
-  held the lock across the JSON serialization *and* the disk write, which
-  is fine at this scale but I narrowed/widened it for a reason and want
-  to be able to explain the tradeoff."]
+
 - README wording and the curl examples — ran each one myself against a
   live server and fixed field names/paths that didn't match the actual
   code.
