@@ -28,8 +28,7 @@ single large generated dump.
   with `uvicorn src.main:app --reload`, hit it with each curl example in
   order (create, list, filter, totals, delete), then ran `pytest -q` — all
   before finalizing the README, since these commands are meant to be run
-  verbatim. [Note anything you had to fix — e.g. a dependency missing from
-  requirements.txt, a typo in a curl path.]
+  verbatim.
 
 - **Rounding to 2 decimal places.** I specifically tested that
   `/expenses/total` doesn't drift from floating-point summation — e.g.
@@ -81,25 +80,23 @@ single large generated dump.
 
 ## 3. AI suggestions I decided not to use, and why
 
-- [Fill in: e.g. "Claude suggested switching to SQLite via `sqlite3` for
+- [ "Claude suggested switching to SQLite via `sqlite3` for
   persistence instead of the JSON file, citing better crash-safety. The
   assignment explicitly says no database is required, and the JSON file
   with atomic writes already covers the crash-safety concern at this
   scale, so I kept the simpler approach."]
-- [Fill in: e.g. "It suggested adding a background thread to periodically
+- ["It suggested adding a background thread to periodically
   flush to disk instead of writing on every mutation. For a personal
   expense tracker with low write volume, writing synchronously on every
   mutation is simpler to reason about and avoids a whole class of
   lost-write bugs on crash, so I declined the added complexity."]
-- [Fill in: e.g. "It proposed a `PUT /expenses/{id}` update endpoint 'for
+- [ "It proposed a `PUT /expenses/{id}` update endpoint 'for
   completeness.' Left it out — outside the assignment's required scope,
   and I didn't want to add an untested, unrequested surface area."]
-- [Add anything else you rejected, including bonus features you
-  considered (search, monthly summary, Docker) and didn't build.]
 
 ## Known limitations / things I'd flag to a reviewer
 
-- [Optional, honest gaps — e.g. "The full-file rewrite on every mutation
+- [Honest gaps —  "The full-file rewrite on every mutation
   is O(n); documented in the README as an intentional simplification, not
   an oversight, since it's fine at this scale." "No concurrent-request
   stress testing beyond the lock existing — I trust it conceptually but
