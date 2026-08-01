@@ -78,29 +78,33 @@ def test_create_expense_rounds_amount_to_two_decimals(client):
 
 
 @pytest.mark.parametrize(
-    "payload",
+    "payload,expected_field",
     [
-        {},  # all fields missing
-        {"amount": 10.0, "category": "Food", "date": "2026-07-31"},  # missing title
-        {"title": "", "amount": 10.0, "category": "Food", "date": "2026-07-31"},  # empty title
-        {"title": "   ", "amount": 10.0, "category": "Food", "date": "2026-07-31"},  # whitespace title
-        {"title": "Lunch", "category": "Food", "date": "2026-07-31"},  # missing amount
-        {"title": "Lunch", "amount": 0, "category": "Food", "date": "2026-07-31"},  # zero amount
-        {"title": "Lunch", "amount": -5, "category": "Food", "date": "2026-07-31"},  # negative amount
-        {"title": "Lunch", "amount": "abc", "category": "Food", "date": "2026-07-31"},  # non-numeric
-        {"title": "Lunch", "amount": 5.0, "date": "2026-07-31"},  # missing category
-        {"title": "Lunch", "amount": 5.0, "category": " ", "date": "2026-07-31"},  # blank category
-        {"title": "Lunch", "amount": 5.0, "category": "Food"},  # missing date
-        {"title": "Lunch", "amount": 5.0, "category": "Food", "date": "not-a-date"},
-        {"title": "Lunch", "amount": 5.0, "category": "Food", "date": "2026-13-01"},  # bad month
-        {"title": "Lunch", "amount": 5.0, "category": "Food", "date": "2026-02-30"},  # impossible day
-        {"title": "Lunch", "amount": 5.0, "category": "Food", "date": "31-07-2026"},  # wrong format
+        ({}, "title"),  # all fields missing — first error will be title
+        ({"amount": 10.0, "category": "Food", "date": "2026-07-31"}, "title"),
+        ({"title": "", "amount": 10.0, "category": "Food", "date": "2026-07-31"}, "title"),
+        ({"title": "   ", "amount": 10.0, "category": "Food", "date": "2026-07-31"}, "title"),
+        ({"title": "Lunch", "category": "Food", "date": "2026-07-31"}, "amount"),
+        ({"title": "Lunch", "amount": 0, "category": "Food", "date": "2026-07-31"}, "amount"),
+        ({"title": "Lunch", "amount": -5, "category": "Food", "date": "2026-07-31"}, "amount"),
+        ({"title": "Lunch", "amount": "abc", "category": "Food", "date": "2026-07-31"}, "amount"),
+        ({"title": "Lunch", "amount": 5.0, "date": "2026-07-31"}, "category"),
+        ({"title": "Lunch", "amount": 5.0, "category": " ", "date": "2026-07-31"}, "category"),
+        ({"title": "Lunch", "amount": 5.0, "category": "Food"}, "date"),
+        ({"title": "Lunch", "amount": 5.0, "category": "Food", "date": "not-a-date"}, "date"),
+        ({"title": "Lunch", "amount": 5.0, "category": "Food", "date": "2026-13-01"}, "date"),
+        ({"title": "Lunch", "amount": 5.0, "category": "Food", "date": "2026-02-30"}, "date"),
+        ({"title": "Lunch", "amount": 5.0, "category": "Food", "date": "31-07-2026"}, "date"),
     ],
 )
-def test_create_expense_rejects_bad_input(client, payload):
+def test_create_expense_rejects_bad_input(client, payload, expected_field):
     resp = client.post("/expenses", json=payload)
     assert resp.status_code == 422
-    assert "detail" in resp.json()
+    detail = resp.json()["detail"]
+    assert expected_field in detail[0]["loc"], (
+        f"expected error on '{expected_field}', got errors on: "
+        f"{[e['loc'] for e in detail]}"
+    )
 
 
 @pytest.mark.parametrize("value", ["Infinity", "-Infinity", "NaN"])
