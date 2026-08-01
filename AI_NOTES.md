@@ -73,8 +73,7 @@ single large generated dump.
   do their job correctly — the real gap was in my own workflow, not test
   coverage: I found this bug by testing manually via `/docs` before ever
   running the automated suite, when running `pytest` first would have
-  surfaced it immediately with zero manual effort. See the limitations
-  section for what I'm taking from that.
+  surfaced it immediately with zero manual effort.
 
 - **Rounding to 2 decimal places.** Added two expenses with amounts 0.10
   and 0.20 and checked `/expenses/total` — it returned a clean `0.3`, not
@@ -104,6 +103,16 @@ single large generated dump.
   silently hit an old server instance instead — worth noting for anyone
   repeating this test, the "Address already in use" error is easy to miss
   and will make the test give a false result).
+
+- **Corrupted `data/expenses.json` fails cleanly.** Tested by writing
+  invalid JSON to the data file and starting the server: it fails fast
+  during FastAPI's `lifespan` startup with a clear, specific error
+  (`RuntimeError: Corrupt expense data file <path>: Expecting value: line
+  1 column 1 (char 0)`) rather than starting in a broken state or serving
+  confusing errors per-request. The server exits immediately and never
+  begins accepting traffic, which is the right behavior for a
+  data-integrity failure — better to fail loudly at startup than to
+  discover it mid-request later.
 
 - **Delete behavior.** Confirmed deleting a valid id returns success and
   the expense no longer appears in `GET /expenses`, and that deleting a
@@ -148,11 +157,3 @@ single large generated dump.
 - No concurrent-request stress testing beyond confirming the lock exists
   in `storage.py` — I trust it conceptually but didn't load-test it.
 - No pagination on `GET /expenses`.
-- I haven't specifically tested what happens if `data/expenses.json`
-  becomes corrupted or malformed on disk while the server is stopped;
-  `JsonFileStorage.load()` raises a hard `RuntimeError` in that case,
-  which happens during FastAPI's `lifespan` startup — meaning a corrupted
-  data file would currently crash the server on startup entirely rather
-  than failing gracefully or recovering. This is a defensible
-  fail-loudly design choice, but I haven't verified what the actual
-  startup error looks like to a user.
