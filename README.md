@@ -4,6 +4,8 @@ A small FastAPI service for recording personal expenses. It validates input with
 Pydantic v2, keeps everything in memory, and optionally persists to a local JSON
 file so data survives a restart. No database required.
 
+**Bonus implemented:** OpenAPI/Swagger interactive docs at `/docs`.
+
 ## Features
 
 - `POST /expenses` — add an expense (server-generated UUID, validated payload).
