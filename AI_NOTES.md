@@ -122,6 +122,18 @@ single large generated dump.
   warning** (a `PendingDeprecationWarning` from inside Starlette's own
   multipart-parsing dependency, not from my code or tests).
 
+  - **Tightened a validation test to check the specific failing field, not
+  just the status code.** `test_create_expense_rejects_bad_input`
+  originally only asserted `status_code == 422` and that a `detail` key
+  existed. That would still pass even if an error got misattributed to
+  the wrong field — e.g. a bad date incorrectly blamed on `title`. I
+  paired each bad-input payload with the field it should fail on and
+  assert `expected_field in detail[0]["loc"]`, so the test now confirms
+  *which* validation rule fired, not just that some 422 happened. All 15
+  parametrized cases pass, including the all-fields-missing case, which
+  confirms Pydantic reports errors in field-declaration order (title
+  first) for that payload.
+
 ## 3. AI suggestions I decided not to use, and why
 
 - Claude suggested switching to SQLite for persistence instead of the
