@@ -16,8 +16,9 @@ single large generated dump.
   atomic write (temp file + `os.replace`), and the lock around mutations.
 - `src/main.py` — FastAPI routes and the exception handling for validation
   errors.
-- `tests/test_expenses.py` — the pytest suite structure and most test cases
-  (35 tests total).
+- `tests/test_expenses.py` — the pytest suite structure and all 35 test
+  cases, including the parametrized bad-input cases and the non-finite-float
+  (`NaN`/`Infinity`) handling.
 
 **Written or fixed by me, after manual testing surfaced a bug:**
 - **Fixed a real bug in the AI-generated validation-error handler.** See
@@ -44,31 +45,36 @@ single large generated dump.
   does). So the handler itself threw an `AttributeError` every time it
   ran, meaning *every* invalid request — bad amount, bad date, blank
   title — crashed with a generic 500 instead of the intended 422 with
-  field-level detail. This wasn't visible from reading the code; it only
-  surfaced when I manually tested edge cases via `/docs`. Every case I
-  tried (amount = 0, amount = -5, an impossible date like
-  `2026-02-30`, an empty title, a whitespace-only title) came back 500. I
-  confirmed the root cause from the server traceback
-  (`AttributeError: module 'starlette.status' has no attribute
+  field-level detail. I found this by manually testing edge cases via
+  `/docs` before running the automated suite: amount = 0, amount = -5, an
+  impossible date like `2026-02-30`, an empty title, and a whitespace-only
+  title all came back 500. I confirmed the root cause from the server
+  traceback (`AttributeError: module 'starlette.status' has no attribute
   'HTTP_422_UNPROCESSABLE_CONTENT'`), fixed it by switching to
   `HTTP_422_UNPROCESSABLE_ENTITY`, and reverified all five cases — each
   now correctly returns 422 with the specific field-level error (e.g.
   `greater_than` / "Input should be greater than 0" for the amount cases,
   `date_from_datetime_parsing` for the bad date, `string_too_short` and my
-  own `value_error` message for the blank-title cases). I also stumbled
-  onto a sixth case by accident — a malformed JSON body (two objects
-  pasted back-to-back in the Swagger UI) — which now correctly returns
-  422 with a `json_invalid` / "JSON decode error" detail instead of
-  crashing, confirming the fix holds for FastAPI's body-parsing layer too,
-  not just Pydantic's field validators.
+  own `value_error` message for the blank-title cases). I also found a
+  sixth case by accident — a malformed JSON body (two objects pasted
+  back-to-back in the Swagger UI) — which now correctly returns 422 with a
+  `json_invalid` / "JSON decode error" detail instead of crashing,
+  confirming the fix holds for FastAPI's body-parsing layer too, not just
+  Pydantic's field validators.
 
-  This is worth flagging because the underlying validation logic itself
-  (the `gt=0` constraint on amount, the blank-string check, Pydantic's
-  date parsing) was correct from the start — the bug was purely in how the
-  error got reported back to the client. It would have shipped completely
-  unnoticed under normal happy-path testing, and in fact it *did* ship
-  past my full 35-test pytest suite (see the limitations note below on
-  why).
+  The underlying validation logic itself (the `gt=0` constraint on
+  amount, the blank-string check, Pydantic's date parsing) was correct
+  from the start — the bug was purely in how the error got reported back
+  to the client. To double check whether my own test suite would have
+  caught this, I later checked out the pre-fix version of `main.py` and
+  ran `pytest` against it directly: **19 of 35 tests failed**, each with
+  the real `AttributeError` traceback, not a silent pass. So the test
+  suite's exact-status-code assertions (`assert resp.status_code == 422`)
+  do their job correctly — the real gap was in my own workflow, not test
+  coverage: I found this bug by testing manually via `/docs` before ever
+  running the automated suite, when running `pytest` first would have
+  surfaced it immediately with zero manual effort. See the limitations
+  section for what I'm taking from that.
 
 - **Rounding to 2 decimal places.** Added two expenses with amounts 0.10
   and 0.20 and checked `/expenses/total` — it returned a clean `0.3`, not
@@ -103,9 +109,9 @@ single large generated dump.
   the expense no longer appears in `GET /expenses`, and that deleting a
   nonexistent or already-deleted id returns 404.
 
-- **Full pytest suite: 35 passed, 1 unrelated warning** (a
-  `PendingDeprecationWarning` from inside Starlette's own multipart-parsing
-  dependency, not from my code or tests).
+- **Full pytest suite: 35 passed against the fixed code, 1 unrelated
+  warning** (a `PendingDeprecationWarning` from inside Starlette's own
+  multipart-parsing dependency, not from my code or tests).
 
 ## 3. AI suggestions I decided not to use, and why
 
@@ -125,16 +131,28 @@ single large generated dump.
 
 ## Known limitations / things I'd flag to a reviewer
 
-- **The original AI-generated tests for validation failures didn't pin
-  down the exact status code.** The 500-vs-422 bug above shipped past a
-  full, green, 35-test pytest run both before and after my fix — meaning
-  the tests were checking something like "the request didn't succeed"
-  rather than "the request returned 422 specifically." I caught the bug
-  through manual testing via `/docs`, not through the test suite. I'd
-  want to tighten those assertions given more time, since full test
-  coverage on paper didn't actually catch a real, user-facing bug.
+- **The test suite would have caught the 500-vs-422 bug immediately, but
+  I didn't run it before manually finding the issue.** I discovered the
+  bug by testing edge cases by hand via `/docs` first, then ran `pytest`
+  afterward (against the already-fixed code, so it passed). To check
+  whether the suite itself was actually adequate, I later checked out the
+  pre-fix version of `main.py` and ran the suite against it specifically:
+  19 of 35 tests failed with the real traceback. So the gap wasn't in
+  test coverage — the exact-status-code assertions correctly pin down
+  422, not just "any failure" — the gap was in my own workflow. I should
+  run the full suite first, before any manual testing, since it would
+  have surfaced this in seconds instead of requiring manual edge-case
+  testing via Swagger.
 - The full-file rewrite on every mutation is O(n) per write; this is an
   intentional simplification appropriate at this scale, not an oversight.
 - No concurrent-request stress testing beyond confirming the lock exists
   in `storage.py` — I trust it conceptually but didn't load-test it.
 - No pagination on `GET /expenses`.
+- I haven't specifically tested what happens if `data/expenses.json`
+  becomes corrupted or malformed on disk while the server is stopped;
+  `JsonFileStorage.load()` raises a hard `RuntimeError` in that case,
+  which happens during FastAPI's `lifespan` startup — meaning a corrupted
+  data file would currently crash the server on startup entirely rather
+  than failing gracefully or recovering. This is a defensible
+  fail-loudly design choice, but I haven't verified what the actual
+  startup error looks like to a user.
